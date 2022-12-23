@@ -34,12 +34,13 @@ public class ArgumentTextConvert extends TextCommandArgument<OptionMessages> {
 			Field f = trait.getClass().getDeclaredField("text");
 			f.setAccessible(true);
 			List<String> ls = new ArrayList<>((List<String>) f.get(trait));
-			for (Message s : option.getValue()) {
+			for (Message s : option.getValue().get(0)) {
 				if (ls.contains(s.getText())) ls.remove(s.getText());
 			}
 			for (String s : ls) {
-				option.addMessage(s);
+				option.addMessage(0, s, null);
 			}
+			option.setLastDialog(0);
 			sender.sendMessage(ChatColor.GREEN.toString() + ls.size() + " messages added.");
 			option.getTextInstance().getNPC().removeTrait(Text.class);
 			return true;

@@ -55,7 +55,7 @@ public class ArgumentMessageSetSender extends MessageCommandArgument {
 	}
 	
 	@Override
-	public List<String> onTabCompleteMessage(CommandSender sender, String[] args, OptionMessages option, String argCmdId) {
+	public List<String> onTabCompleteMessage(CommandSender sender, String[] args, OptionMessages option, String dialog, String argCmdId) {
 		if (args.length == 1) return SENDERS;
 		return Collections.emptyList();
 	}

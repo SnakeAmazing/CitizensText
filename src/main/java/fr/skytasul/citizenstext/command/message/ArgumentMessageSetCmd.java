@@ -79,13 +79,13 @@ public class ArgumentMessageSetCmd extends MessageCommandArgument {
 	}
 	
 	@Override
-	public List<String> onTabCompleteMessage(CommandSender sender, String[] args, OptionMessages option, String argCmdId) {
+	public List<String> onTabCompleteMessage(CommandSender sender, String[] args, OptionMessages option, String dialog, String argCmdId) {
 		if (args.length == 1) return ARGUMENTS;
 		if (args.length == 2) {
 			String operation = args[0].toLowerCase();
 			if (operation.equals("auto") || operation.equals("console")) {
 				try {
-					Message message = option.getMessage(Integer.parseInt(argCmdId));
+					Message message = option.getMessage(Integer.parseInt(dialog), Integer.parseInt(argCmdId));
 					return IntStream.range(0, message.getCommands().size()).mapToObj(Integer::toString).collect(Collectors.toList());
 				}catch (Exception ex) {}
 			}

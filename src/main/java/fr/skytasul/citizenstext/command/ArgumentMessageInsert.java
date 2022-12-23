@@ -26,13 +26,22 @@ public class ArgumentMessageInsert extends TextCommandArgument<OptionMessages> {
 		}
 		
 		try {
-			int id = Integer.parseInt(args[0]);
-			if (id < 0 || id > option.getValue().size()) {
+			int dialog = Integer.parseInt(args[0]);
+			int id = Integer.parseInt(args[1]);
+			if (dialog < 0 || dialog > option.getValue().size()) {
 				sender.sendMessage(ChatColor.RED + "The number you have entered (" + id + ") must be between 0 and " + option.getValue().size() + ".");
 				return false;
 			}
-			String msg = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-			option.insertMessage(id, msg);
+
+			if (id < 0 || id > option.getValue().get(dialog).size()) {
+				sender.sendMessage(ChatColor.RED + "The number you have entered (" + id + ") must be between 0 and " + option.getValue().get(dialog).size() + ".");
+				return false;
+			}
+			String perm = args[2];
+			if (perm.equalsIgnoreCase("null")) perm = null;
+			String msg = String.join(" ", Arrays.copyOfRange(args, 3, args.length));
+			option.insertMessage(id, dialog, msg, perm);
+			option.setLastDialog(dialog);
 			sender.sendMessage(ChatColor.GREEN + "Succesfully inserted message \"" + msg + "\"§r§a at the position " + id + ".");
 			return true;
 		}catch (IllegalArgumentException ex) {

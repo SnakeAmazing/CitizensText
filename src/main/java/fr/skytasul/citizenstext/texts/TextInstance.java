@@ -2,6 +2,7 @@ package fr.skytasul.citizenstext.texts;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -154,7 +155,14 @@ public class TextInstance implements Listener{
 		CTPlayerText playerText = CTPlayer.getPlayer(p).getText(this);
 		if (playerText.hasNextMessageTask()) return;
 		if (e.getTo().distance(npc.getEntity().getLocation()) < CitizensTextConfiguration.getDistanceToContinue()) {
-			send(p, playerText);
+			int dialog = 0;
+			for (int i = 0; i < 20; ++i) {
+				if (p.hasPermission(npc.getName().toLowerCase(Locale.ROOT) + "." + i)) {
+					dialog = i;
+					break;
+				}
+			}
+			send(p, playerText, dialog);
 		}
 	}
 	
@@ -181,14 +189,21 @@ public class TextInstance implements Listener{
 		if (!CitizensTextConfiguration.getClicks().contains(click)) return;
 		if (getOption(OptionNear.class).getOrDefault()) return;
 		if (e.getNPC() == npc){
-			send(e.getClicker(), CTPlayer.getPlayer(e.getClicker()).getText(this));
+			int dialog = 0;
+			for (int i = 0; i < 20; ++i) {
+				if (e.getClicker().hasPermission(npc.getName().toLowerCase(Locale.ROOT) + "." + i)) {
+					dialog = i;
+				}
+			}
+			send(e.getClicker(), CTPlayer.getPlayer(e.getClicker()).getText(this), dialog);
 		}
 	}
 	
-	public void send(Player p, CTPlayerText playerText) {
+	public void send(Player p, CTPlayerText playerText, int dialog) {
 		OptionMessages messages = getMessages();
-		if (messages.messagesSize() == 0) return;
-		
+		if (messages.dialogs() == 0) return;
+		playerText.setDialog(dialog);
+
 		if (playerText.hasTime()) {
 			if (playerText.getTime() > System.currentTimeMillis() || (!playerText.canRepeat() && !isRepeat())) return;
 			playerText.removeTime();
@@ -196,31 +211,31 @@ public class TextInstance implements Listener{
 		if (CitizensTextConfiguration.getClickMinimumTime() > 0) playerText.setTime(System.currentTimeMillis() + CitizensTextConfiguration.getClickMinimumTime() * 1000);
 		
 		if (isRandom()) {
-			int id = ThreadLocalRandom.current().nextInt(messages.messagesSize());
-			TextSendEvent event = new TextSendEvent(p, this, messages.getMessage(id));
+			int id = ThreadLocalRandom.current().nextInt(messages.messagesSize(dialog));
+			TextSendEvent event = new TextSendEvent(p, this, messages.getMessage(dialog, id));
 			Bukkit.getPluginManager().callEvent(event);
-			if (!event.isCancelled()) event.getMessage().send(p, id, this);
+			if (!event.isCancelled()) event.getMessage().send(p, dialog, id,this);
 			return;
 		}
 		int id;
 		if (playerText.hasStarted()) { // player has already started
 			if (!playerText.hasResetTime() || playerText.getResetTime() > System.currentTimeMillis()) {
 				id = playerText.getMessageIndex();
-				if (id >= messages.messagesSize()) id = 0;
-			}else id = 0;
+				if (id >= messages.messagesSize(dialog)) id = 0;
+			} else id = 0;
 			playerText.removeNextMessageTask();
 		}else { // never started
 			id = 0;
 		}
-		Message message = messages.getMessage(id);
+		Message message = messages.getMessage(dialog, id);
 		TextSendEvent event = new TextSendEvent(p, this, message);
 		Bukkit.getPluginManager().callEvent(event);
 		if (event.isCancelled()) return;
 		message = event.getMessage();
-		message.send(p, id, this);
+		message.send(p, dialog, id,this);
 		
 		id++;
-		if (messages.messagesSize() == id) { // last message
+		if (messages.messagesSize(dialog) == id) { // last message
 			playerText.removeMessage();
 			if (isRepeat()) {
 				int playback = getOption(OptionPlaybackTime.class).getOrDefault();
@@ -243,7 +258,7 @@ public class TextInstance implements Listener{
 					if (p.getWorld() != entity.getWorld()) return;
 					if (p.getLocation().distance(entity.getLocation()) > CitizensTextConfiguration.getDistanceToContinue()) return; // player too far
 				}
-				send(p, playerText);
+				send(p, playerText, dialog);
 			}, message.getDelay()));
 		}
 	}

@@ -21,9 +21,11 @@ public class Message {
 	private List<CTCommand> commands = new ArrayList<>();
 	private String sound;
 	private int delay = -1;
+	private String permission;
 	
-	public Message(String text) {
+	public Message(String text, String permission) {
 		this.text = text;
+		this.permission = permission;
 	}
 	
 	public Message(ConfigurationSection data) {
@@ -42,6 +44,8 @@ public class Message {
 		}
 		if (data.contains("sound")) sound = data.getString("sound");
 		if (data.contains("delay")) delay = data.getInt("delay");
+
+		if (data.contains("permission")) permission = data.getString("permission");
 	}
 	
 	public String getText() {
@@ -53,7 +57,15 @@ public class Message {
 		this.text = text;
 		return tmp;
 	}
-	
+
+	public String getPermission() {
+		return permission;
+	}
+
+	public void setPermission(String permission) {
+		this.permission = permission;
+	}
+
 	public void addCommand(String command) {
 		commands.add(new CTCommand(command));
 	}
@@ -98,18 +110,21 @@ public class Message {
 		return delay < 0 ? CitizensTextConfiguration.getTimeToContinue() * 20 : delay;
 	}
 	
-	public void send(Player p, int id, TextInstance textInstance) {
+	public void send(Player p, int dialog, int id, TextInstance textInstance) {
+
+		if (!p.hasPermission(permission)) return;
+
 		String msg = text;
 		msg = msg.replace("{PLAYER}", p.getName());
 		TextSender sender = getSender();
 		if (sender == null || sender instanceof TextSender.NPCSender) {
-			msg = TextSender.NPC_SENDER.format(msg, textInstance.getNPCName(), id + 1, textInstance.getMessages().messagesSize());
+			msg = TextSender.NPC_SENDER.format(msg, textInstance.getNPCName(), id + 1, textInstance.getMessages().messagesSize(dialog));
 		}else if (sender instanceof TextSender.PlayerSender) {
-			msg = TextSender.PLAYER_SENDER.format(msg, p.getName(), id + 1, textInstance.getMessages().messagesSize());
+			msg = TextSender.PLAYER_SENDER.format(msg, p.getName(), id + 1, textInstance.getMessages().messagesSize(dialog));
 		}else if (sender instanceof TextSender.NoSender) {
 			// no format here
 		}else if (sender instanceof TextSender.CustomizedSender) {
-			msg = ((TextSender.CustomizedSender) sender).format(msg, id + 1, textInstance.getMessages().messagesSize());
+			msg = ((TextSender.CustomizedSender) sender).format(msg, id + 1, textInstance.getMessages().messagesSize(dialog));
 		}
 		if (CitizensText.getInstance().isPAPIEnabled()) msg = PlaceholderDepend.format(msg, p);
 		
@@ -128,13 +143,14 @@ public class Message {
 	}
 	
 	public Object serialize() {
-		if (getSender() == TextSender.NPC_SENDER && (commands.isEmpty()) && (sound == null) && delay == -1) return text;
+		if (getSender() == TextSender.NPC_SENDER && (commands.isEmpty()) && (sound == null) && delay == -1 && permission == null) return text;
 		Map<String, Object> map = new HashMap<>();
 		map.put("text", text);
 		if (getSender() != TextSender.NPC_SENDER) map.put("sender", sender.toString());
 		if (!commands.isEmpty()) map.put("commands", commands.stream().map(CTCommand::serialize).collect(Collectors.toList()));
 		if (sound != null) map.put("sound", sound);
 		if (delay != -1) map.put("delay", delay);
+		map.put("permission", permission);
 		return map;
 	}
 }

@@ -1,28 +1,34 @@
 package fr.skytasul.citizenstext.options;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 
 import fr.skytasul.citizenstext.message.Message;
 import fr.skytasul.citizenstext.texts.TextInstance;
 
-public class OptionMessages extends TextOption<List<Message>> {
-	
+public class OptionMessages extends TextOption<List<List<Message>>> {
+
+	private int lastDialog = 0;
+
 	public OptionMessages(TextInstance txt) {
 		super(txt);
 	}
-	
+
+	public void setLastDialog(int lastDialog) {
+		this.lastDialog = lastDialog;
+	}
+
+	public int getLastDialog() {
+		return lastDialog;
+	}
+
 	@Override
-	public List<Message> getDefault() {
+	public List<List<Message>> getDefault() {
 		return null;
 	}
 	
@@ -36,37 +42,51 @@ public class OptionMessages extends TextOption<List<Message>> {
 		return getValue() == null || getValue().isEmpty();
 	}
 	
-	public void addMessage(String msg) {
-		getValue().add(new Message(msg));
+	public void addMessage(int index, String msg, String permission) {
+		try {
+			List<Message> l = getValue().get(index);
+		} catch (IndexOutOfBoundsException exception) {
+			getValue().add(new ArrayList<>());
+		}
+
+		getValue().get(index).add(new Message(msg, permission));
 	}
 	
-	public String editMessage(int id, String msg) {
-		return getValue().get(id).setText(msg);
+	public String editMessage(int index, int id, String msg) {
+		return getValue().get(index).get(id).setText(msg);
 	}
 	
-	public void insertMessage(int id, String msg) {
-		getValue().add(id, new Message(msg));
+	public void insertMessage(int index, int id, String msg, String permission) {
+		getValue().get(index).add(id, new Message(msg, permission));
 	}
 	
-	public String removeMessage(int id) {
-		return getValue().remove(id).getText();
+	public String removeMessage(int index, int id) {
+		return getValue().get(index).remove(id).getText();
 	}
-	
-	public int messagesSize() {
+
+	public int dialogs() {
 		return getValue().size();
 	}
+
+	public int messagesSize(int index) {
+		return getValue().get(index).size();
+	}
 	
-	public Message getMessage(int id) {
-		return getValue().get(id);
+	public Message getMessage(int index, int id) {
+		return getValue().get(index).get(id);
 	}
 	
 	public String listMessages() {
 		StringJoiner stb = new StringJoiner("\n");
 		for (int i = 0; i < getValue().size(); i++) {
-			Message msg = getValue().get(i);
-			stb.add(ChatColor.AQUA + "" + i + " : "
-					+ ChatColor.GREEN + msg.getText()
-					+ (msg.getCommands().isEmpty() ? "" : ChatColor.GRAY + " (" + msg.getCommands().size() + " command(s): " + msg.getCommandsList() + "§7)"));
+			stb.add(ChatColor.GREEN + "Dialog #" + i);
+			for (int j = 0; j < getValue().get(i).size(); ++j) {
+				Message msg = getValue().get(i).get(j);
+				stb.add(ChatColor.AQUA + "" + j + " : "
+						+ ChatColor.GREEN + msg.getText()
+						+ (msg.getCommands().isEmpty() ? "" : ChatColor.GRAY + " (" + msg.getCommands().size() + " command(s): " + msg.getCommandsList() + "§7)"));
+			}
+			stb.add("");
 		}
 		return stb.toString();
 	}
@@ -80,23 +100,33 @@ public class OptionMessages extends TextOption<List<Message>> {
 	@Override
 	protected void saveValue(ConfigurationSection config, String key) {
 		Map<String, Object> tmp = new HashMap<>();
-		for (int i = 0; i < messagesSize(); i++) {
-			tmp.put(Integer.toString(i), getMessage(i).serialize());
+		for (int i = 0; i < messagesSize(lastDialog); i++) {
+			tmp.put(Integer.toString(i), getMessage(lastDialog, i).serialize());
 		}
-		config.set(key, tmp);
+		config.set(key + ".dialog" + lastDialog, tmp);
 	}
-	
+
 	@Override
-	protected List<Message> loadValue(ConfigurationSection config, String key) {
+	protected List<List<Message>> loadValue(ConfigurationSection config, String key) {
 		ConfigurationSection messagesSection = config.getConfigurationSection(key);
-		
-		return messagesSection.getKeys(false).stream().map(mkey -> {
-			Message msg;
-			if (messagesSection.isConfigurationSection(mkey)) {
-				msg = new Message(messagesSection.getConfigurationSection(mkey));
-			}else msg = new Message(messagesSection.getString(mkey));
-			return new AbstractMap.SimpleEntry<>(Integer.valueOf(mkey), msg);
-		}).sorted((x, y) -> Integer.compare(x.getKey(), y.getKey())).map(Entry::getValue).collect(Collectors.toList());
+		List<List<Message>> dialogs = new ArrayList<>();
+		List<Message> messages;
+		for (String s : messagesSection.getKeys(false)) {
+			messages = new ArrayList<>();
+			if (messagesSection.isConfigurationSection(s)) {
+				ConfigurationSection sec = config.getConfigurationSection(key + "." + s);
+				for (String s1 : sec.getKeys(false)) {
+					if (sec.isConfigurationSection(s1)) {
+						messages.add(new Message(sec.getConfigurationSection(s1)));
+					} else {
+						messages.add(new Message(messagesSection.getString(s1), null));
+					}
+				}
+				dialogs.add(messages);
+			}
+
+		}
+		return dialogs;
 	}
 	
 }

@@ -12,7 +12,7 @@ public class ArgumentTextDelete extends TextCommandArgument<OptionMessages> {
 	
 	@Override
 	public boolean onCommand(CommandSender sender, String[] args, OptionMessages option) {
-		if (option.messagesSize() > 0) {
+		if (option.messagesSize(Integer.parseInt(args[0])) > 0) {
 			sender.sendMessage("§cFor security, please clear all messages before deleting.");
 		}else {
 			option.getTextInstance().delete();

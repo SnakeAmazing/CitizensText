@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import fr.skytasul.citizenstext.options.OptionMessages;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
